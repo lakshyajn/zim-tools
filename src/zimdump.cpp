@@ -41,12 +41,7 @@
 
 #include <fcntl.h>
 #include <filesystem>
-#ifdef _WIN32
-# define SEPARATOR "\\"
-# include <io.h>
-# include <windows.h>
-#else
-# define SEPARATOR "/"
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 
@@ -257,12 +252,8 @@ void ZimDumper::writeHttpRedirect(const std::string& directory, const std::strin
 void ZimDumper::dumpFiles(const std::string& directory, bool symlinkdump, std::function<bool (const char c)> nsfilter)
 {
   unsigned int truncatedFiles = 0;
-#if defined(_WIN32)
-    std::wstring wdir = utf8ToUtf16(directory);
-    CreateDirectoryW(wdir.c_str(), NULL);
-#else
-  ::mkdir(directory.c_str(), 0777);
-#endif
+  std::error_code ec;
+  std::filesystem::create_directories(std::filesystem::u8path(directory), ec);
 
   std::vector<std::string> pathcache;
   for (auto& entry:m_archive.iterEfficient()) {
@@ -290,7 +281,6 @@ void ZimDumper::dumpFiles(const std::string& directory, bool symlinkdump, std::f
     std::stringstream ss;
     ss << dir << filename;
     std::string relative_path = ss.str();
-    std::string full_path = directory + SEPARATOR + relative_path;
 
     if (entry.isRedirect()) {
         auto redirectItem = entry.getItem(true);
@@ -301,17 +291,18 @@ void ZimDumper::dumpFiles(const std::string& directory, bool symlinkdump, std::f
         } else {
 #ifdef _WIN32
             auto blob = redirectItem.getData();
-            write_to_file(directory + SEPARATOR, relative_path, blob.data(), blob.size());
+            write_to_file(directory, relative_path, blob.data(), blob.size());
 #else
-            if (symlink(redirectPath.c_str(), full_path.c_str()) != 0) {
+            std::filesystem::path fullpath = std::filesystem::u8path(directory) / std::filesystem::u8path(relative_path).relative_path();
+            if (symlink(redirectPath.c_str(), fullpath.string().c_str()) != 0) {
               throw std::runtime_error(
-                std::string("Error creating symlink from ") + full_path + " to " + redirectPath);
+                std::string("Error creating symlink from ") + fullpath.string() + " to " + redirectPath);
             }
 #endif
         }
     } else {
       auto blob = entry.getItem().getData();
-      write_to_file(directory + SEPARATOR, relative_path, blob.data(), blob.size());
+      write_to_file(directory, relative_path, blob.data(), blob.size());
     }
   }
 }
