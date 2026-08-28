@@ -63,9 +63,8 @@ bool fileExists(const std::string& path)
 
 bool isDirectory(const std::string &path)
 {
-  struct stat filestatus;
-  stat(path.c_str(), &filestatus);
-  return (filestatus.st_mode & S_IFMT) == S_IFDIR;
+  std::error_code ec;
+  return std::filesystem::is_directory(std::filesystem::u8path(path), ec);
 }
 
 std::string getFileExtension(std::string_view path) {
