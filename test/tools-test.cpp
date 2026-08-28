@@ -13,6 +13,13 @@ TEST(CommonTools, isDirectory)
   EXPECT_TRUE(isDirectory("data/minimal-content"));
 }
 
+TEST(CommonTools, fileExists)
+{
+  EXPECT_TRUE(fileExists("data/minimal-content/favicon.png"));
+  EXPECT_FALSE(fileExists("data/minimal-content"));
+  EXPECT_FALSE(fileExists("data/minimal-content/non_existent_file.png"));
+}
+
 TEST(CommonTools, base64_encode)
 {
   unsigned char data[] = { 0xff, 0x00, 0x7a };

@@ -37,6 +37,8 @@
 #include <unicode/utypes.h>
 #include <unicode/unistr.h>
 
+#include <filesystem>
+
 #ifdef _WIN32
 #define SEPARATOR "\\"
 #else
@@ -55,14 +57,8 @@ std::string asciitolower(std::string s)
 
 bool fileExists(const std::string& path)
 {
-  bool flag = false;
-  std::fstream fin;
-  fin.open(path.c_str(), std::ios::in);
-  if (fin.is_open()) {
-    flag = true;
-  }
-  fin.close();
-  return flag;
+  std::error_code ec;
+  return std::filesystem::is_regular_file(std::filesystem::u8path(path), ec);
 }
 
 bool isDirectory(const std::string &path)
