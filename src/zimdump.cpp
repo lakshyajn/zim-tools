@@ -36,6 +36,9 @@
 #include "version.h"
 #include "tools.h"
 
+#include <cerrno>
+#include <cstring>
+
 #include <fcntl.h>
 #include <filesystem>
 #ifdef _WIN32
@@ -213,32 +216,21 @@ void write_to_error_directory(const std::string& base, const std::string relpath
     while ((p = url.find('/')) != std::string::npos)
         url.replace(p, 1, "%2f");
 
-#ifdef _WIN32
-    auto fullpath = std::string(base + ERRORSDIR + url);
-    std::wstring wpath = utf8ToUtf16(fullpath);
-    auto fd = _wopen(wpath.c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC, S_IWRITE);
+    std::filesystem::path fullpath = std::filesystem::u8path(base) / ERRORSDIR / std::filesystem::u8path(url).relative_path();
+    std::ofstream stream(fullpath, std::ios::out | std::ios::binary);
 
-    if (fd == -1) {
-        std::cerr << "Error opening file " + fullpath + " cause: " + ::strerror(errno) << std::endl;
-        return ;
+    if (!stream) {
+        std::cerr << "Error opening file " << fullpath.u8string() << " cause: " << std::strerror(errno) << std::endl;
+        return;
     }
-    if ((size_t) write(fd, content, size) != size) {
-      close(fd);
-      std::cerr << "Failed writing: " << fullpath << " - " << ::strerror(errno) << std::endl;
-    }
-#else
-    std::ofstream stream(base + ERRORSDIR + url);
 
     stream.write(content, size);
-
-    if (stream.fail() || stream.bad()) {
-        std::cerr << "Error writing file to errors dir. " << (base + ERRORSDIR + url) << std::endl;
-        throw std::runtime_error(
-          std::string("Error writing file to errors dir. ") + (base + ERRORSDIR + url));
+    if (!stream) {
+        std::cerr << "Error writing file to errors dir. " << fullpath.u8string() << std::endl;
+        throw std::runtime_error("Error writing file to errors dir. " + fullpath.u8string());
     } else {
-        std::cerr << "Wrote " << (base + relpath) << " to " << (base + ERRORSDIR + url) << std::endl;
+        std::cerr << "Wrote " << (base + "/" + relpath) << " to " << fullpath.u8string() << std::endl;
     }
-#endif
 }
 
 inline void write_to_file(const std::string &base, const std::string& path, const char* data, size_t size) {
