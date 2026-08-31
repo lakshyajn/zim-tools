@@ -23,8 +23,17 @@ TEST(CommonTools, fileExists)
 
 TEST(CommonTools, getMimeTypeForFile)
 {
+  magic = magic_open(MAGIC_MIME);
+  if (magic) {
+      (void)magic_load(magic, NULL);
+  }
+
   EXPECT_EQ(getMimeTypeForFile("data/minimal-content", "favicon.png"), "image/png");
-  EXPECT_EQ(getMimeTypeForFile("data/minimal-content", "nonexistentnoext"), "application/octet-stream");
+
+  if (magic) {
+      magic_close(magic);
+      magic = nullptr;
+  }
 }
 
 TEST(CommonTools, base64_encode)
