@@ -45,6 +45,8 @@
 #define SEPARATOR "/"
 #endif
 
+#include <filesystem>
+
 
 std::string asciitolower(std::string s)
 {
@@ -68,21 +70,15 @@ std::string trimAsciiWhitespace(std::string value)
 
 bool fileExists(const std::string& path)
 {
-  bool flag = false;
-  std::fstream fin;
-  fin.open(path.c_str(), std::ios::in);
-  if (fin.is_open()) {
-    flag = true;
-  }
-  fin.close();
-  return flag;
+  std::error_code ec;
+  const auto fspath = std::filesystem::u8path(path);
+  return std::filesystem::is_regular_file(fspath, ec) && std::ifstream(fspath).is_open();
 }
 
 bool isDirectory(const std::string &path)
 {
-  struct stat filestatus;
-  stat(path.c_str(), &filestatus);
-  return (filestatus.st_mode & S_IFMT) == S_IFDIR;
+  std::error_code ec;
+  return std::filesystem::is_directory(std::filesystem::u8path(path), ec);
 }
 
 std::string getFileExtension(std::string_view path) {
