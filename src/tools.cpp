@@ -38,13 +38,6 @@
 #include <unicode/utypes.h>
 #include <unicode/unistr.h>
 
-#ifdef _WIN32
-#define SEPARATOR "\\"
-#else
-#include <unistd.h>
-#define SEPARATOR "/"
-#endif
-
 #include <filesystem>
 
 
@@ -289,11 +282,11 @@ static std::string removeLastPathElement(const std::string& path,
                                   const bool removePostSeparator)
 {
   std::string newPath = path;
-  size_t offset = newPath.find_last_of(SEPARATOR);
+  size_t offset = newPath.find_last_of("/\\");
 
   if (removePreSeparator && offset == newPath.length() - 1) {
     newPath = newPath.substr(0, offset);
-    offset = newPath.find_last_of(SEPARATOR);
+    offset = newPath.find_last_of("/\\");
   }
   newPath = removePostSeparator ? newPath.substr(0, offset)
                                 : newPath.substr(0, offset + 1);
@@ -365,8 +358,9 @@ std::string computeAbsolutePath(const std::string& path,
                                 const std::string& relativePath)
 {
   /* Remove leaf part of the path if not already a directory */
+  const bool isDirectory = !path.empty() && (path.back() == '/' || path.back() == '\\');
   std::string absolutePath = path.length()
-                               ? (path[path.length() - 1] == '/'
+                               ? (isDirectory
                                   ? path
                                   : removeLastPathElement(path, false, false))
                                : path;

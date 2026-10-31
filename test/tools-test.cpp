@@ -185,6 +185,12 @@ TEST(CommonTools, computeAbsolutePath)
   // without trailing /  'data' component will be stripped from path:
   str = computeAbsolutePath("/home/alex/oz/zim-tools/test/data", "minimal-content/hello.html");
   EXPECT_EQ(str, "/home/alex/oz/zim-tools/test/minimal-content/hello.html");
+
+  str = computeAbsolutePath("C:\\test\\data\\", "minimal-content/hello.html");
+  EXPECT_EQ(str, "C:\\test\\data\\minimal-content/hello.html");
+
+  str = computeAbsolutePath("C:\\test\\data", "minimal-content/hello.html");
+  EXPECT_EQ(str, "C:\\test\\minimal-content/hello.html");
 }
 
 TEST(CommonTools, replaceStringInPlaceOnce)
