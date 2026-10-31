@@ -216,57 +216,43 @@ void write_to_error_directory(const std::string& base, const std::string relpath
     while ((p = url.find('/')) != std::string::npos)
         url.replace(p, 1, "%2f");
 
-#ifdef _WIN32
-    auto fullpath = std::string(base + ERRORSDIR + url);
-    std::wstring wpath = utf8ToUtf16(fullpath);
-    auto fd = _wopen(wpath.c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC, S_IWRITE);
+    std::filesystem::path fullpath = std::filesystem::u8path(base) / ERRORSDIR / std::filesystem::u8path(url);
+    std::ofstream stream(fullpath, std::ios::out | std::ios::binary);
 
-    if (fd == -1) {
-        std::cerr << "Error opening file " + fullpath + " cause: " + ::strerror(errno) << std::endl;
-        return ;
+    if (!stream) {
+        std::cerr << "Error opening file " << fullpath.u8string() << " cause: " << std::strerror(errno) << std::endl;
+        return;
     }
-    if ((size_t) write(fd, content, size) != size) {
-      close(fd);
-      std::cerr << "Failed writing: " << fullpath << " - " << ::strerror(errno) << std::endl;
-    }
-#else
-    std::ofstream stream(base + ERRORSDIR + url);
 
     stream.write(content, size);
-
-    if (stream.fail() || stream.bad()) {
-        std::cerr << "Error writing file to errors dir. " << (base + ERRORSDIR + url) << std::endl;
-        throw std::runtime_error(
-          std::string("Error writing file to errors dir. ") + (base + ERRORSDIR + url));
+    if (!stream) {
+        std::cerr << "Error writing file to errors dir. " << fullpath.u8string() << std::endl;
+        throw std::runtime_error("Error writing file to errors dir. " + fullpath.u8string());
     } else {
-        std::cerr << "Wrote " << (base + relpath) << " to " << (base + ERRORSDIR + url) << std::endl;
+        const auto original_path = (std::filesystem::u8path(base) / std::filesystem::u8path(relpath)).u8string();
+        std::cerr << "Wrote " << original_path << " to " << fullpath.u8string() << std::endl;
     }
-#endif
 }
 
 inline void write_to_file(const std::string &base, const std::string& path, const char* data, size_t size) {
-    std::string fullpath = base + path;
-#ifdef _WIN32
-    std::wstring wpath = utf8ToUtf16(fullpath);
-    auto fd = _wopen(wpath.c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC, S_IWRITE);
-#else
-    auto fd = open(fullpath.c_str(), O_WRONLY | O_CREAT | O_TRUNC,
-                              S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-#endif
-    if (fd == -1) {
+    std::filesystem::path fullpath = std::filesystem::u8path(base) / std::filesystem::u8path(path);
+    std::ofstream stream(fullpath, std::ios::out | std::ios::binary);
+
+    if (!stream) {
         write_to_error_directory(base, path, data, size);
-        return ;
+        return;
     }
-    if ((size_t) write(fd, data, size) != size) {
-      write_to_error_directory(base, path, data, size);
+
+    stream.write(data, size);
+    if (!stream) {
+        write_to_error_directory(base, path, data, size);
     }
-    close(fd);
 }
 
 void ZimDumper::writeHttpRedirect(const std::string& directory, const std::string& outputPath, const std::string& currentEntryPath, std::string redirectPath)
 {
     const auto content = httpRedirectHtml(redirectPath);
-    write_to_file(directory + SEPARATOR, outputPath, content.c_str(), content.size());
+    write_to_file(directory, outputPath, content.c_str(), content.size());
 }
 
 void ZimDumper::dumpFiles(const std::string& directory, bool symlinkdump, std::function<bool (const char c)> nsfilter)
